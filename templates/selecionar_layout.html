@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Selecionar Layout - DataCheckAI{% endblock %}
+
+{% block content %}
+<div class="selection-container">
+    <h2>Selecione o Layout para {{ organizacao.nome }}</h2>
+    <p>Escolha o tipo de arquivo que você deseja validar para esta organização.</p>
+
+    <div class="layout-grid">
+        {% for key, value in layouts.items() %}
+            <a href="{{ url_for('validador', organizacao_id=organizacao.id, tipo=key) }}" class="layout-card">
+                <h3>{{ value.nome }}</h3>
+                <p>Clique para iniciar a validação do layout de {{ key|replace('_', ' ')|capitalize }}.</p>
+            </a>
+        {% endfor %}
+    </div>
+
+    <div class="actions" style="margin-top: 2rem;">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Voltar para Seleção de Organização</a>
+    </div>
+</div>
+{% endblock %}

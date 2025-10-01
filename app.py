@@ -332,18 +332,24 @@ with app.app_context():
 # I will just copy the rest of the original file content here
 
 
-# ------------ NEW DASHBOARD & ORGANIZATION ROUTES ------------ #
+# ------------ NEW APP FLOW ROUTES ------------ #
 
 @app.route('/')
 def index():
-    """Redirects to the main dashboard."""
-    return redirect(url_for('dashboard'))
+    """Displays the organization selection screen."""
+    organizacoes = Organizacao.query.order_by(Organizacao.nome).all()
+    return render_template('selecionar_organizacao.html', organizacoes=organizacoes)
 
 @app.route('/dashboard')
 def dashboard():
-    """Displays the main dashboard with all organizations and their progress."""
-    organizacoes = Organizacao.query.options(db.joinedload(Organizacao.progressos)).order_by(Organizacao.nome).all()
-    return render_template('dashboard.html', organizacoes=organizacoes)
+    """Redirects to the new main page."""
+    return redirect(url_for('index'))
+
+@app.route('/selecionar-layout/<int:organizacao_id>')
+def selecionar_layout(organizacao_id):
+    """Displays the layout selection screen for a given organization."""
+    organizacao = Organizacao.query.get_or_404(organizacao_id)
+    return render_template('selecionar_layout.html', organizacao=organizacao, layouts=LAYOUTS)
 
 @app.route('/organizacao/adicionar', methods=['GET', 'POST'])
 def adicionar_organizacao():
@@ -401,79 +407,6 @@ def detalhes_organizacao(organizacao_id):
     sessoes = SessaoMigracao.query.filter_by(organizacao_id=organizacao_id).order_by(SessaoMigracao.data_processamento.desc()).all()
     return render_template('detalhes_organizacao.html', organizacao=organizacao, sessoes=sessoes, layouts=LAYOUTS)
 
-@app.route('/processar_arquivo/<int:organizacao_id>', methods=['POST'])
-def processar_arquivo(organizacao_id):
-    """
-    Handles the file upload for a specific organization and module.
-    """
-    organizacao = Organizacao.query.get_or_404(organizacao_id)
-    tipo_layout = request.form.get('modulo')
-    file = request.files.get('arquivo')
-
-    if not tipo_layout or not file or not file.filename:
-        flash('Módulo e arquivo são obrigatórios.', 'danger')
-        return redirect(url_for('detalhes_organizacao', organizacao_id=organizacao_id))
-
-    if tipo_layout not in LAYOUTS or tipo_layout not in PROCESSORS:
-        flash('Layout ou processador inválido.', 'danger')
-        return redirect(url_for('detalhes_organizacao', organizacao_id=organizacao_id))
-
-    processor = PROCESSORS[tipo_layout](LAYOUTS[tipo_layout])
-
-    filename = secure_filename(file.filename)
-    ext = os.path.splitext(filename)[1].lower()
-
-    try:
-        raw_content = file.read()
-        df, _, _, alertas = file_processor.detectar_encoding_e_linhas_validas(raw_content, extensao=ext, filename=filename)
-
-        if df is None:
-            raise ValueError("Não foi possível processar o arquivo. Verifique o formato e o conteúdo.")
-
-        if alertas:
-            flash("\n".join(alertas), 'warning')
-
-        # Create a new migration session
-        nova_sessao = SessaoMigracao(
-            cliente_id=cliente_id,
-            modulo=tipo_layout,
-            arquivo_original=filename,
-            total_registros=len(df),
-            status='mapeando'
-        )
-        db.session.add(nova_sessao)
-        db.session.commit()
-
-        # Prepare session data for the mapping page
-        mapping_history = mapping_service.load_mapping_history(get_db(), tipo_layout)
-        auto_map = processor.auto_map_header(df)
-        obrigatorios = [c for c, _, _, _, o in LAYOUTS[tipo_layout]['layout'] if o]
-
-        if not all(auto_map.get(c) for c in obrigatorios):
-            auto_map_data = processor.auto_map_by_data(df, mapping_history)
-            for campo, col in auto_map_data.items():
-                if campo not in auto_map:
-                    auto_map[campo] = col
-
-        pedir_manual = not all(auto_map.get(c) for c in obrigatorios)
-
-        session['dataframes'] = {filename: df.to_json(orient='split')}
-        session['mapear'] = [{
-            'nome': filename, 'colunas': df.columns.tolist(),
-            'amostra': df.head(20).where(pd.notnull(df.head(20)), '').to_dict('records'),
-            'auto_map': auto_map, 'has_header': True, 'pedir_manual': pedir_manual,
-            'num_registros': len(df),
-        }]
-        session['tipo_layout'] = tipo_layout
-        session['sessao_id'] = nova_sessao.id # Link to the new session
-        session['total_registros'] = len(df)
-
-        return redirect(url_for('validador', tipo=tipo_layout))
-
-    except Exception as e:
-        flash(f'Erro ao processar arquivo: {str(e)}', 'danger')
-        return redirect(url_for('detalhes_cliente', cliente_id=cliente_id))
-
 @app.route('/download/<int:sessao_id>')
 def download_arquivo(sessao_id):
     """Serves the generated TXT file for download."""
@@ -485,28 +418,83 @@ def download_arquivo(sessao_id):
     return send_from_directory(diretorio, os.path.basename(sessao.arquivo_gerado), as_attachment=True)
 
 
-# ------------ LEGACY & REFACTORED VALIDATOR ROUTES ------------ #
+# ------------ VALIDATOR FLOW ROUTES ------------ #
 
-@app.route('/validador/<tipo>', methods=['GET'])
-def validador(tipo):
-    if tipo not in LAYOUTS:
+@app.route('/organizacao/<int:organizacao_id>/validador/<tipo>', methods=['GET', 'POST'])
+def validador(organizacao_id, tipo):
+    organizacao = Organizacao.query.get_or_404(organizacao_id)
+
+    if tipo not in LAYOUTS or tipo not in PROCESSORS:
         abort(404)
+
+    processor = PROCESSORS[tipo](LAYOUTS[tipo])
     contexto = LAYOUTS[tipo]
+
+    if request.method == 'POST':
+        file = request.files.get('arquivo')
+        if not file or not file.filename:
+            flash('Arquivo é obrigatório.', 'danger')
+            return redirect(url_for('validador', organizacao_id=organizacao_id, tipo=tipo))
+
+        filename = secure_filename(file.filename)
+        ext = os.path.splitext(filename)[1].lower()
+
+        try:
+            raw_content = file.read()
+            df, _, _, alertas = file_processor.detectar_encoding_e_linhas_validas(raw_content, extensao=ext, filename=filename)
+
+            if df is None:
+                raise ValueError("Não foi possível processar o arquivo. Verifique o formato e o conteúdo.")
+
+            if alertas:
+                flash("\\n".join(alertas), 'warning')
+
+            nova_sessao = SessaoMigracao(
+                organizacao_id=organizacao_id, modulo=tipo, arquivo_original=filename,
+                total_registros=len(df), status='mapeando'
+            )
+            db.session.add(nova_sessao)
+            db.session.commit()
+
+            mapping_history = mapping_service.load_mapping_history(get_db(), tipo)
+            auto_map = processor.auto_map_header(df)
+            obrigatorios = [c for c, _, _, _, o in contexto['layout'] if o]
+
+            if not all(auto_map.get(c) for c in obrigatorios):
+                auto_map_data = processor.auto_map_by_data(df, mapping_history)
+                for campo, col in auto_map_data.items():
+                    if campo not in auto_map:
+                        auto_map[campo] = col
+
+            session['dataframes'] = {filename: df.to_json(orient='split')}
+            session['mapear'] = [{'nome': filename, 'colunas': df.columns.tolist(), 'amostra': df.head(20).where(pd.notnull(df.head(20)), '').to_dict('records'), 'auto_map': auto_map, 'num_registros': len(df)}]
+            session['tipo_layout'] = tipo
+            session['sessao_id'] = nova_sessao.id
+            session['organizacao_id'] = organizacao_id
+
+            # Clear old results from session for the new flow
+            session.pop('inconsistencias', None)
+            session.pop('stats', None)
+
+        except Exception as e:
+            flash(f'Erro ao processar arquivo: {str(e)}', 'danger')
+            return redirect(url_for('validador', organizacao_id=organizacao_id, tipo=tipo))
+
+    # GET request logic
     mapear = session.get('mapear', None)
     inconsistencias = session.get('inconsistencias', None)
     stats = session.get('stats', None)
-    total_registros = session.get('total_registros', 0)
 
     return render_template(
         "validador.html",
+        organizacao=organizacao,
         tipo=tipo,
         nome_rotina=contexto["nome"],
         layout=contexto["layout"],
         js_file=contexto.get("js"),
         mapear=mapear,
         inconsistencias=inconsistencias,
-        stats=stats,
-        total_registros=total_registros
+        stats=stats
     )
 
 @app.route('/validador/<tipo>/mapear', methods=['POST'])
@@ -573,8 +561,8 @@ def validador_mapear(tipo):
     session.pop('sessao_id', None)
     session.pop('total_registros', None)
 
-    flash('Arquivo analisado. Verifique o resultado no histórico do cliente.', 'success')
-    return redirect(url_for('detalhes_cliente', cliente_id=sessao_migracao.cliente_id))
+    flash('Arquivo analisado. Verifique o resultado no histórico da organização.', 'success')
+    return redirect(url_for('detalhes_organizacao', organizacao_id=sessao_migracao.organizacao_id))
 
 @app.route('/validador/<tipo>/reset', methods=['POST'])
 def validador_reset(tipo):

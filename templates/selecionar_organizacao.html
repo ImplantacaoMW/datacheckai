@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Selecionar Organização - DataCheckAI{% endblock %}
+
+{% block content %}
+<div class="selection-container">
+    <h2>Selecione uma Organização</h2>
+    <p>Escolha uma organização existente para continuar ou cadastre uma nova.</p>
+
+    <div class="organizacoes-list">
+        {% if organizacoes %}
+            <ul>
+                {% for org in organizacoes %}
+                    <li>
+                        <a href="{{ url_for('selecionar_layout', organizacao_id=org.id) }}">
+                            <strong>{{ org.nome }}</strong> (Código: {{ org.codigo }})
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>Nenhuma organização cadastrada.</p>
+        {% endif %}
+    </div>
+
+    <div class="actions">
+        <a href="{{ url_for('adicionar_organizacao') }}" class="btn btn-primary">
+            + Cadastrar Nova Organização
+        </a>
+    </div>
+</div>
+{% endblock %}

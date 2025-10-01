@@ -1,400 +1,106 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8" />
-    <title>DataCheck AI - Validação de Dados</title>
-    <!-- <link rel="icon" href="https://www.microwork.inf.br/shorticon.png" /> -->
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logotipo.png') }}" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style_theme.css') }}" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-</head>
-<body>
-    <div class="container">
-        <header class="header">
-            <!-- <img src="https://www.microwork.inf.br/shorticon.png" alt="MW Logo" class="logo" /> -->
-            <img src="{{ url_for('static', filename='img/logotipo.png') }}" alt="MW Logo" class="logo" />
-            <h1>DataCheck AI - {{ nome_rotina }}</h1>  <!-- <i class="fas fa-database"></i>/> -->
-        </header>
-        <button id="btnToggleTheme" title="Alternar tema claro/escuro" aria-label="Alternar tema"></button>
+{% extends "base.html" %}
 
-        {% if session.alerta_quebra %}
-        <div class="alert-quebra-linha">
-            <i class="fas fa-exclamation-triangle"></i>
-            {{ session.alerta_quebra.replace('\n', '<br>')|safe }}
-        </div>
-        {% endif %}
+{% block title %}Validador: {{ nome_rotina }} - {{ organizacao.nome }}{% endblock %}
 
-        {% if not (inconsistencias is defined and stats is defined and inconsistencias is not none and stats is not none) %}
-        <form id="uploadForm" action="{{ url_for('validador_upload', tipo=tipo) }}" method="post" enctype="multipart/form-data" class="upload-form">
-            <p class="format-info">
-                Formatos suportados: <strong>.csv, .txt, .xlsx</strong><br />
-                Delimitadores aceitos: <strong>vírgula (,), ponto e vírgula (;), pipe (|), tabulação (tab)</strong>
-            </p>
-            <input type="file" name="files" id="fileInput" multiple accept=".csv,.txt,.xlsx" style="display:none" required />
-            <button type="button" id="btnFileSelect">Selecionar Arquivos</button>
-            <div id="fileList" class="file-list-container"></div>
-            <button type="submit" class="btn-enviar" id="btnEnviar" style="display:none;">Enviar</button>
-        </form>
-        {% endif %}
-
-        <div id="loadingOverlay">
-            <div class="spinner"></div>
-            <div id="loadingMainMsg">Processando, por favor aguarde ...</div>
-            <div id="loadingExtraMsg" style="display:none;">O arquivo deve ser grande ... só mais um instante, estamos trabalhando.</div>
-            <div id="loadingExtraMsgTwo" style="display:none;">Ainda estamos trabalhando arduamente ... </div>
-        </div>
-
-        {% if total_registros is defined and total_registros > 0 and not inconsistencias and not mapear %}
-        <div class="resultados">
-            <div class="resultado-card resultado-card-geral">
-                <div class="card-header">
-                    <span class="card-title">
-                        <i class="fas fa-database"></i>
-                        Total de registros carregados
-                    </span>
-                </div>
-                <div class="card-stats">
-                    <div class="stat stat-total" title="Total de registros">
-                        <span>{{ total_registros }}</span>
-                    </div>
-                    <div class="stat stat-validos" title="Registros válidos">
-                        <i class="fas fa-check-circle"></i> 0
-                    </div>
-                    <div class="stat stat-invalidos" title="Registros inválidos">
-                        <i class="fas fa-times-circle"></i> 0
-                    </div>
-                </div>
-                <div class="resumo-aceitacao-upload">
-                    Aceitação: <span class="aceitacao-percent aceitacao-baixa">0%</span>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if mapear %}
-        <form id="formMapear" action="{{ url_for('validador_mapear', tipo=tipo) }}" method="post">
-            {% for arquivo in mapear %}
-            <div class="mapear-bloco">
-                <h2>
-                {% if arquivo.num_registros is defined and arquivo.num_registros is not none %}
-                {% endif %}
-                {{ arquivo.nome }} - (Total de Registros: {{ arquivo.num_registros }})
-                </h2>
-                {% if arquivo.erro %}
-                    <p class="erro">{{ arquivo.erro }}</p>
-                {% else %}
-                    <div class="colunas-detectadas">
-                        {% if arquivo.auto_map %}
-                            <div class="auto-map-aviso">
-                                <i class="fas fa-robot"></i>
-                                <strong>Auto Mapping (AI):</strong>
-                                <span>As sugestões abaixo foram geradas por inteligência artificial e podem não estar 100% corretas. <b>Reveja e ajuste manualmente se necessário</b> antes de prosseguir.</span>
-                            </div>
-                            {% for campo, col in arquivo.auto_map.items() %}
-                                {% if col %}
-                                <p><i class="fas fa-check-circle"></i> Coluna sugerida:
-                                <strong>{{ col }}</strong> para <strong>{{ layout | selectattr(0, '==', campo) | map(attribute=1) | first }}</strong>
-                                </p>
-                                {% endif %}
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                    <table class="tabela-mapear">
-                        <thead>
-                            <tr>
-                                <th width="30%">Campo</th>
-                                <th width="60%">Coluna no Arquivo</th>
-                                <th width="10%">Tipo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="grupo-titulo">
-                                <td colspan="3"><strong>Campos Obrigatórios</strong></td>
-                            </tr>
-                            {% for campo, label, tipo_campo, tamanho, obrigatorio in layout if obrigatorio %}
-                            <tr>
-                                <td>{{ label }}</td>
-                                <td>
-                                    <select name="{{ arquivo.nome }}_{{ campo }}" required>
-                                        <option value="">Selecione...</option>
-                                        {% for col in arquivo.colunas %}
-                                        <option value="{{ col }}" {% if arquivo.auto_map.get(campo) == col %}selected{% endif %}>{{ col }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td>{{ tipo_campo }}{% if tamanho %} ({{ tamanho }}){% endif %}</td>
-                            </tr>
-                            {% endfor %}
-                            <tr class="grupo-titulo">
-                                <td colspan="3"><strong>Campos Não Obrigatórios</strong></td>
-                            </tr>
-                            {% for campo, label, tipo_campo, tamanho, obrigatorio in layout if not obrigatorio %}
-                            <tr>
-                                <td>{{ label }}</td>
-                                <td>
-                                    <select name="{{ arquivo.nome }}_{{ campo }}">
-                                        <option value="">Selecione...</option>
-                                        {% for col in arquivo.colunas %}
-                                        <option value="{{ col }}" {% if arquivo.auto_map.get(campo) == col %}selected{% endif %}>{{ col }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td>{{ tipo_campo }}{% if tamanho %} ({{ tamanho }}){% endif %}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    <div class="tabela-amostra-arquivo" data-nome="{{ arquivo.nome }}">
-                        <details>
-                            <summary>
-                                <i class="fas fa-table"></i> Visualizar Amostra do Arquivo (20 primeiras linhas)
-                            </summary>
-                            <div class="tabela-wrapper-scroll">
-                                <table class="gridview" id="grid-{{ arquivo.nome }}">
-                                    <thead>
-                                        <tr>
-                                            {% for col in arquivo.colunas %}
-                                            <th>{{ col if col.strip() else '(sem nome)' }}</th>
-                                            {% endfor %}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for linha in arquivo.amostra %}
-                                        <tr>
-                                            {% for col in arquivo.colunas %}
-                                            <td>{{ linha[col] if col in linha else '' }}</td>
-                                            {% endfor %}
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                                <div class="btn-load-more-container">
-                                    <button type="button" class="btn-load-more" data-initial="20" data-filename="{{ arquivo.nome }}">+ Linhas</button>
-                                </div>
-                            </div>
-                        </details>
-                    </div>
-                {% endif %}
-            </div>
-            {% endfor %}
-            <button type="submit" class="btn-analisar">
-                <i class="fas fa-check"></i> Confirmar Mapeamento
-            </button>
-        </form>
-        {% endif %}
-
-        {% if inconsistencias is defined and stats is defined and inconsistencias is not none and stats is not none %}
-            <form action="{{ url_for('validador_reset', tipo=tipo) }}" method="post" class="reset-form">
-                <button type="submit" class="btn-analise">Nova Análise</button>
-            </form>
-            <div class="resultados">
-                {% if inconsistencias %}
-                    <div class="resultados-cards-row">
-                        {% for item in inconsistencias %}
-                            {% set stat = stats[loop.index0] if stats and loop.index0 < stats|length else none %}
-                            {% set total_registros = stat.total_registros if stat and stat.total_registros is defined else 0 %}
-                            {% set total_validos = stat.total_validos_geral if stat and stat.total_validos_geral is defined else 0 %}
-                            {% set total_invalidos = stat.total_invalidos_geral if stat and stat.total_invalidos_geral is defined else 0 %}
-                            {% set total_analisados = total_registros %}
-                            {% set pct_validos = (100 * total_validos // total_analisados) if total_analisados else 0 %}
-                            {% set pct_invalidos = 100 - pct_validos if total_analisados else 0 %}
-                            <div class="resultado-card resultado-card-analise" data-nome-arquivo="{{ item.nome }}">
-                                <div class="card-header">
-                                    <span class="card-title">
-                                        <i class="fas fa-file-alt"></i>
-                                        {{ item.nome }}
-                                    </span>
-                                    {% if item.erro %}
-                                        <span class="erro">{{ item.erro }}</span>
-                                    {% endif %}
-                                </div>
-                                {% if not item.erro %}
-                                <div class="card-stats-analise">
-                                    <div class="stat-box">
-                                        <span class="stat-label">Total</span>
-                                        <span class="stat-number stat-total">{{ total_registros }}</span>
-                                    </div>
-                                    <div class="stat-box">
-                                        <span class="stat-label">Válidos</span>
-                                        <span class="stat-number stat-validos">{{ total_validos }}</span>
-                                    </div>
-                                    <div class="stat-box">
-                                        <span class="stat-label">Inválidos</span>
-                                        <span class="stat-number stat-invalidos">{{ total_invalidos }}</span>
-                                    </div>
-                                    <div class="stat-box">
-                                        <span class="stat-label">Aceitação</span>
-                                        <span class="stat-number stat-aceitacao
-                                            {% if pct_validos>=95 %}aceitacao-alta{% elif pct_validos>=80 %}aceitacao-media{% else %}aceitacao-baixa{% endif %}">
-                                            {{ pct_validos }}%
-                                        </span>
-                                    </div>
-                                </div>
-                                {% if tipo == 'mercadorias_saldos' and stat and stat.saldo_total is defined and stat.custo_medio_contabil_total is defined %}
-                                <div class="totalizadores-row">
-                                    <div class="totalizador-card">
-                                        <span class="totalizador-label">Mercadorias</span>
-                                        <span class="totalizador-valor">{{ stat.total_mercadorias }}</span>
-                                    </div>
-                                    <div class="totalizador-card">
-                                        <span class="totalizador-label">Saldo Total</span>
-                                        <span class="totalizador-valor">{{ stat.saldo_total|float|round(2) }}</span>
-                                    </div>
-                                    <div class="totalizador-card">
-                                        <span class="totalizador-label">Custo Médio Contábil Total</span>
-                                        <span class="totalizador-valor">{{ stat.custo_medio_contabil_total|reais }}</span>
-                                    </div>
-                                </div>
-                                {% endif %}
-                                <div class="barra-animada">
-                                    <span class="barra-animada-validos" style="width:0%">
-                                        <span class="barra-label">{{ pct_validos }}%</span>
-                                    </span>
-                                    <span class="barra-animada-invalidos" style="width:0%">
-                                        <span class="barra-label barra-label-inv">{{ pct_invalidos }}%</span>
-                                    </span>
-                                </div>
-                                <div class="progresso-legenda">
-                                    <span class="legenda-validos"><i class="fas fa-check-circle"></i> Válidos</span>
-                                    <span class="legenda-invalidos"><i class="fas fa-times-circle"></i> Inválidos</span>
-                                </div>
-                                {% if item.inconsistencias and item.inconsistencias|length > 0 %}
-<div class="inc-box">
-    <h4>Inconsistências encontradas:</h4>
-    <div class="grupo-inc">
-        <div class="grupo-titulo"><b>Campos Obrigatórios</b></div>
-        {% for campo, label, tipo_campo, tamanho, obrigatorio in layout if obrigatorio %}
-            {% for chave, data in item.inconsistencias.items() %}
-                {% if data.label == label or chave.startswith(campo + '_') %}
-                <div class="inc-titulo">
-                    <span class="inc-campo">
-                        {{ label | replace(" *", "") }}<span class="inc-asterisco">*</span>:
-                    </span>
-                    <span class="inc-descricao">
-                        {{ data.mensagem }}
-                    </span>
-                </div>
-                {% if data.amostra %}
-                <ul class="amostra-lista">
-                    {% for v in data.amostra %}
-                        <li class="amostra-exemplo">{{ v }}</li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-                {% endif %}
-            {% endfor %}
-        {% endfor %}
-    </div>
-    <div class="grupo-inc">
-        <div class="grupo-titulo"><b>Campos Não Obrigatórios</b></div>
-        {% for campo, label, tipo_campo, tamanho, obrigatorio in layout if not obrigatorio %}
-            {% for chave, data in item.inconsistencias.items() %}
-                {% if data.label == label or chave.startswith(campo + '_') %}
-                <div class="inc-titulo">
-                    <span class="inc-campo">
-                        {{ label | replace(" *", "") }}:
-                    </span>
-                    <span class="inc-descricao">
-                        {{ data.mensagem }}
-                    </span>
-                </div>
-                {% if data.amostra %}
-                <ul class="amostra-lista">
-                    {% for v in data.amostra %}
-                        <li class="amostra-exemplo">{{ v }}</li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-                {% endif %}
-            {% endfor %}
-        {% endfor %}
-    </div>
+{% block content %}
+<div class="validator-header">
+    <h2>Validador de Layout: {{ nome_rotina }}</h2>
+    <p>Organização: <strong>{{ organizacao.nome }}</strong> (Código: {{ organizacao.codigo }})</p>
 </div>
-                                {% endif %}
-                                {% endif %}
-                            </div>
-                        {% endfor %}
-                    </div>
-                    <div class="acoes-analise">
-                        <div class="copy-section">
-                            <button class="btn btn-copiar" id="copyResultBtn">
-                                <i class="fas fa-copy"></i> Copiar Resultado
-                            </button>
-                        </div>
-                        <div class="btn-retorno-analise">
-                            {% if not (inconsistencias is defined and stats is defined and inconsistencias is not none and stats is not none) and not mapear %}
-                                <a href="{{ url_for('principal') }}" class="btn-voltar">
-                                    <i class="fas fa-arrow-left"></i> Voltar
-                                </a>
-                            {% else %}
-                                <form action="{{ url_for('validador_reset', tipo=tipo) }}" method="post" style="display:inline;">
-                                    <button type="submit" class="btn-voltar">
-                                        <i class="fas fa-arrow-left"></i> Voltar
-                                    </button>
-                                </form>
-                            {% endif %}
-                        </div>
-                {% else %}
-                    <div class="resultado">
-                        <h2>Nenhum dado para analisar</h2>
-                        <p>Os dados não puderam ser processados ou estão vazios.</p>
-                    </div>
-                    <div class="btn-retorno-analise">
-                        {% if not (inconsistencias is defined and stats is defined and inconsistencias is not none and stats is not none) and not mapear %}
-                            <a href="{{ url_for('principal') }}" class="btn-voltar">
-                                <i class="fas fa-arrow-left"></i> Voltar
-                            </a>
-                        {% else %}
-                            <form action="{{ url_for('validador_reset', tipo=tipo) }}" method="post" style="display:inline;">
-                                <button type="submit" class="btn-voltar">
-                                    <i class="fas fa-arrow-left"></i> Voltar
-                                </button>
-                            </form>
-                        {% endif %}
-                    </div>
-                {% endif %}
+
+<!-- 1. Upload Form (shown if no mapping or results are in session) -->
+{% if not mapear and not inconsistencias %}
+<div class="upload-section form-container">
+    <h3>Passo 1: Enviar Arquivo para Validação</h3>
+    <p class="format-info">Formatos suportados: <strong>.csv, .txt, .xlsx</strong></p>
+    <form action="{{ url_for('validador', organizacao_id=organizacao.id, tipo=tipo) }}" method="POST" enctype="multipart/form-data" id="upload-form">
+        <div class="form-group">
+            <label for="arquivo">Selecione o arquivo:</label>
+            <input type="file" name="arquivo" id="arquivo" required>
+        </div>
+        <div class="form-actions">
+            <a href="{{ url_for('selecionar_layout', organizacao_id=organizacao.id) }}" class="btn btn-secondary">Voltar</a>
+            <button type="submit" class="btn btn-primary">Processar Arquivo</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+
+<!-- 2. Mapping Interface (shown if there's a file to be mapped) -->
+{% if mapear %}
+<div class="mapping-container">
+    <h3>Passo 2: Mapear Colunas do Arquivo</h3>
+    <form id="formMapear" action="{{ url_for('validador_mapear', tipo=tipo) }}" method="post">
+        {% for arquivo in mapear %}
+        <div class="mapear-bloco">
+            <h4>Arquivo: {{ arquivo.nome }} ({{ arquivo.num_registros }} registros)</h4>
+
+            <div class="auto-map-aviso">
+                <p><strong>Mapeamento Automático (IA):</strong> As sugestões abaixo foram geradas por IA. Revise e ajuste se necessário.</p>
             </div>
-        {% else %}
-            <div class="btn-retorno">
-                {% if not (inconsistencias is defined and stats is defined and inconsistencias is not none and stats is not none) and not mapear %}
-                    <a href="{{ url_for('principal') }}" class="btn-voltar">
-                        <i class="fas fa-arrow-left"></i> Voltar
-                    </a>
-                {% else %}
-                    <form action="{{ url_for('validador_reset', tipo=tipo) }}" method="post" style="display:inline;">
-                        <button type="submit" class="btn-voltar">
-                            <i class="fas fa-arrow-left"></i> Voltar
-                        </button>
-                    </form>
-                {% endif %}
-            </div>
-        {% endif %}
+
+            <table class="tabela-mapear">
+                <thead>
+                    <tr>
+                        <th>Campo do Layout</th>
+                        <th>Sua Coluna no Arquivo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="grupo-titulo"><td colspan="2">Campos Obrigatórios</td></tr>
+                    {% for campo, label, _, _, obrigatorio in layout if obrigatorio %}
+                    <tr>
+                        <td>{{ label }}</td>
+                        <td>
+                            <select name="{{ arquivo.nome }}_{{ campo }}" required>
+                                <option value="">Selecione...</option>
+                                {% for col in arquivo.colunas %}
+                                <option value="{{ col }}" {% if arquivo.auto_map.get(campo) == col %}selected{% endif %}>{{ col }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="grupo-titulo"><td colspan="2">Campos Opcionais</td></tr>
+                    {% for campo, label, _, _, obrigatorio in layout if not obrigatorio %}
+                    <tr>
+                        <td>{{ label }}</td>
+                        <td>
+                            <select name="{{ arquivo.nome }}_{{ campo }}">
+                                <option value="">Selecione...</option>
+                                {% for col in arquivo.colunas %}
+                                <option value="{{ col }}" {% if arquivo.auto_map.get(campo) == col %}selected{% endif %}>{{ col }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+        <div class="form-actions">
+             <a href="{{ url_for('validador', organizacao_id=organizacao.id, tipo=tipo) }}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Confirmar Mapeamento e Analisar</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+
+<!-- 3. Results Display (shown after mapping) -->
+{% if inconsistencias is not none and stats is not none %}
+<div class="results-container">
+    <h3>Passo 3: Resultados da Análise</h3>
+     <div class="actions">
+        <a href="{{ url_for('validador', organizacao_id=organizacao.id, tipo=tipo) }}" class="btn btn-primary">Analisar Outro Arquivo</a>
+        <a href="{{ url_for('detalhes_organizacao', organizacao_id=organizacao.id) }}" class="btn btn-secondary">Ver Histórico da Organização</a>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="{{ url_for('static', filename='js/' + js_file) }}"></script>
-    <script src="{{ url_for('static', filename='js/barra.js') }}"></script>
-    <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                var fileInput = document.getElementById('fileInput');
-                var btnEnviar = document.getElementById('btnEnviar');
-                var btnFileSelect = document.getElementById('btnFileSelect');
 
-                btnFileSelect.addEventListener('click', function() {
-                    fileInput.click();
-                });
+    <!-- This section can be further developed to show the analysis results -->
+    <p style="margin-top: 1rem;">A análise foi concluída. Os resultados estão disponíveis na página de detalhes da organização.</p>
+</div>
+{% endif %}
 
-                fileInput.addEventListener('change', function() {
-                    if (fileInput.files && fileInput.files.length > 0) {
-                        btnEnviar.style.display = '';
-                    } else {
-                        btnEnviar.style.display = 'none';
-                    }
-                });
-
-                btnEnviar.style.display = 'none';
-            });
-    </script>
-</body>
-</html>
+{% endblock %}
