@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>DataCheck AI - Validação de Dados</title>
+    <!-- <link rel="icon" href="https://www.microwork.inf.br/shorticon.png" /> -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logotipo.png') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style_principal.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style_theme.css') }}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <!-- <img src="https://www.microwork.inf.br/shorticon.png" alt="MW Logo" class="logo" /> -->
+            <img src="{{ url_for('static', filename='img/logotipo.png') }}" alt="Logo Data Check" class="logo" />
+
+            <h1>DataCheck AI</h1> <!-- <i class="fas fa-database"></i>/> -->
+        </header>
+
+        <button id="btnToggleTheme" title="Alternar tema claro/escuro" aria-label="Alternar tema"></button>
+
+        <h2>Escolha a Validação</h2>
+
+        <div class="card-grid">
+
+            <!-- Cadastro de Mercadorias -->
+            <a href="{{ url_for('validador', tipo='mercadorias') }}" class="card">
+                <i class="fas fa-box-open"></i>
+                <span>Cadastro de Mercadorias</span>
+            </a>
+
+            <!-- Saldo de Mercadorias -->
+            <a href="{{ url_for('validador', tipo='mercadorias_saldos') }}" class="card"
+            ><i class="fas fa-warehouse"></i>
+                <span>Saldo de Mercadorias</span>
+            </a>
+
+            <!-- Cadastro de Pessoas -->
+            <a href="{{ url_for('validador', tipo='pessoas') }}" class="card">
+                <i class="fas fa-user"></i>
+                <span>Cadastro de Pessoas</span>
+            </a>
+
+            <!-- Cadastro de Veículos do Cliente -->
+            <a href="{{ url_for('validador', tipo='veiculos_cliente') }}" class="card">
+                <i class="fas fa-truck"></i>
+                <span>Cadastro de Veículos do Cliente</span>
+            </a>
+
+            <!-- Quilometragem do Veículos do Cliente -->
+            <a href="{{ url_for('validador', tipo='quilometragem_veiculos_cliente') }}" class="card">
+                <i class="fas fa-road"></i>
+                <span>Quilometragem Veículos do Cliente</span>
+            </a>
+
+            <!-- Cadastro de Serviços -->
+            <a href="{{ url_for('validador', tipo='servicos') }}" class="card">
+                <i class="fas fa-wrench"></i>
+                <span>Cadastro de Serviços</span>
+            </a>
+
+            <!-- Contas a Receber -->
+            <a href="{{ url_for('validador', tipo='financeiro_receber') }}" class="card">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span>Contas a Receber</span>
+            </a>
+
+            <!-- Contas a Pagar -->
+            <a href="{{ url_for('validador', tipo='financeiro_pagar') }}" class="card">
+                <i class="fas fa-money-bill-wave"></i>
+                <span>Contas a Pagar</span>
+            </a>
+
+            <!-- Adiantamento de Cliente -->
+            <a href="{{ url_for('validador', tipo='financeiro_adiantamento_cliente') }}" class="card">
+                <i class="fas fa-hand-holding-usd"></i>
+                <span>Adiantamento de Cliente</span>
+            </a>
+
+            <!-- Adiantamento a Fornecedor -->
+            <a href="{{ url_for('validador', tipo='financeiro_adiantamento_fornecedor') }}" class="card">
+                <i class="fas fa-hand-holding"></i>
+                <span>Adiantamento a Fornecedor</span>
+            </a>
+
+            <!-- Cartões à Receber -->
+            <a href="{{ url_for('validador', tipo='financeiro_cartoes_receber') }}" class="card">
+                <i class="fas fa-credit-card"></i>
+                <span>Cartões à Receber</span>
+            </a>
+
+            <!-- Vale de Funcionários -->
+            <a href="{{ url_for('validador', tipo='financeiro_vale_funcionarios') }}" class="card">
+                <i class="fas fa-user-tag"></i>
+                <span>Vale de Funcionários</span>
+            </a>
+
+            <!-- Contas a Receber Perdido -->
+            <a href="{{ url_for('validador', tipo='financeiro_receber_perdido') }}" class="card">
+                <i class="fas fa-file-invoice"></i>
+                <span>Contas a Receber Perdido</span>
+            </a>
+
+            <!-- Cheques a Depositar/Devolvido -->
+            <a href="{{ url_for('validador', tipo='financeiro_cheques') }}" class="card">
+                <i class="fas fa-money-check-alt"></i>
+                <span>Cheques a Depositar/Devolvido</span>
+            </a>
+        </div>
+
+    <script src="{{ url_for('static', filename='js/script_theme.js') }}"></script>
+</body>
+</html>

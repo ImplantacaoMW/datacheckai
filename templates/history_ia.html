@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>IA Mapping History - Administração</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/ia.css">
+</head>
+<body>
+<div class="container shadow p-4 bg-white rounded-4 mt-5 mb-5">
+    <h2 class="mb-4">Gerenciamento da IA de Mapeamento</h2>
+    <p class="text-secondary mb-4">Atenção: esta tela é para uso avançado. Exclua campos ou valores <b>apenas se tiver certeza</b>, pois pode afetar o auto-mapeamento da IA.</p>
+
+    {% if history_por_layout %}
+        {% for layout, data in history_por_layout.items() %}
+            {% if data.campos %}
+                <div class="accordion mb-3" id="accordion-{{ layout }}">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading-{{ layout }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ layout }}">
+                                {{ data.nome }}
+                            </button>
+                        </h2>
+                        <div id="collapse-{{ layout }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ layout }}">
+                            <div class="accordion-body">
+                                {% for campo_nome, campo_data in data.campos.items() %}
+                                    <div class="campo-container mb-3 p-3 border rounded">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h5 class="campo-titulo">{{ campo_data.nome }} <span class="badge bg-secondary">{{ campo_data.total }}</span></h5>
+                                            <button class="btn btn-sm btn-outline-danger btn-excluir-campo" data-layout="{{ layout }}" data-campo="{{ campo_data.nome }}">
+                                                <i class="bi bi-trash"></i> Limpar Campo
+                                            </button>
+                                        </div>
+                                        <div class="input-group my-2">
+                                            <input type="text" class="form-control input-busca" placeholder="Buscar amostra..." data-layout="{{ layout }}" data-campo="{{ campo_data.nome }}">
+                                            <button class="btn btn-outline-secondary btn-busca" type="button">
+                                                <i class="bi bi-search"></i>
+                                            </button>
+                                        </div>
+                                        <ul class="list-group lista-amostras">
+                                            {% for amostra in campo_data.amostras %}
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <span class="valor-amostra">{{ amostra }}</span>
+                                                    <button class="btn btn-sm btn-outline-danger btn-excluir-valor" data-layout="{{ layout }}" data-campo="{{ campo_data.nome }}" data-valor="{{ amostra }}">
+                                                        <i class="bi bi-x-lg"></i>
+                                                    </button>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% if campo_data.total > amostras_limit %}
+                                            <small class="text-muted">Mostrando {{ amostras_limit }} de {{ campo_data.total }} amostras.</small>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-warning">Nenhum histórico de mapeamento encontrado.</div>
+    {% endif %}
+</div>
+
+<!-- Modal de confirmação -->
+<div class="modal fade" id="modalConfirmacao" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalLabel">Confirmação</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body" id="modalMsg">
+        <!-- Mensagem aqui -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="modalBtnConfirmar">Excluir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/ia.js"></script>
+<div id="snackbar" class="snackbar"></div>
+<div id="mensagem-backend" data-mensagem="{{ mensagem or '' }}"></div>
+</body>
+</html>

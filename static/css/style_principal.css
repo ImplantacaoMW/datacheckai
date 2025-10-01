@@ -1,0 +1,89 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f4f8;
+    color: #2a3a4a;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 30px;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.logo {
+    height: 50px;
+}
+
+h1 {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #003366;
+    margin: 0;
+}
+
+h2 {
+    color: #00509e;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background-color: #ffffff;
+    border-radius: 10px;
+    padding: 25px;
+    text-align: center;
+    text-decoration: none;
+    color: #003366;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-size: 1rem;
+}
+
+.card i {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    background-color: #e7f0fb;
+}
+
+.btn-retorno {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.btn-voltar {
+    display: inline-block;
+    padding: 12px 20px;
+    background-color: #0072ce;
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    box-shadow: 0 4px 10px rgba(0, 114, 206, 0.3);
+    transition: background-color 0.3s ease;
+}
+
+.btn-voltar:hover {
+    background-color: #00509e;
+}
