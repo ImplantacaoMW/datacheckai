@@ -5,30 +5,37 @@ from datetime import datetime
 class LayoutExporter:
     """Classe base para exportação de arquivos TXT formatados."""
 
-    def __init__(self, modulo, cliente_id, dados_validados):
+    def __init__(self, modulo, organizacao_codigo, cnpj_matriz, dados_validados):
         """
         Inicializa o exportador.
 
         Args:
             modulo (str): Nome do módulo (ex: 'mercadorias').
-            cliente_id (str): Identificador do cliente.
-            dados_validados (pd.DataFrame): DataFrame com os dados já validados e normalizados.
+            organizacao_codigo (str): Código da organização.
+            cnpj_matriz (str): CNPJ da matriz da organização.
+            dados_validados (pd.DataFrame): DataFrame com os dados já validados e formatados.
         """
         self.modulo = modulo
-        self.cliente_id = cliente_id
+        self.organizacao_codigo = organizacao_codigo
+        self.cnpj_matriz = cnpj_matriz
         self.dados = dados_validados
         self.timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        self.filename = f"LAYOUT_{self.modulo.upper()}_{self.cliente_id}_{self.timestamp}.txt"
-        self.filepath = os.path.join('dados', self.filename)  # Salvar na pasta 'dados'
+        self.filename = f"LAYOUT_{self.modulo.upper()}_{self.organizacao_codigo}_{self.timestamp}.txt"
+        self.filepath = os.path.join('dados', self.filename)
 
     def format_data(self):
         """
         Formata os dados de acordo com as regras específicas do layout.
-        Este método deve ser sobrescrito pelas classes filhas.
+        Adiciona um cabeçalho com o CNPJ da matriz se ele for fornecido.
         """
-        # Exemplo de implementação padrão: converter para CSV com TAB
-        # As classes específicas irão formatar campos, tamanhos, etc.
-        return self.dados.to_csv(index=False, sep='\t', lineterminator='\r\n', header=False)
+        header = ""
+        if self.cnpj_matriz:
+            header = f"CNPJ:{self.cnpj_matriz}\n"
+
+        # Converte o DataFrame para string, sem o cabeçalho do pandas
+        data_string = self.dados.to_csv(index=False, sep='\t', lineterminator='\r\n', header=False)
+
+        return header + data_string
 
     def export(self):
         """

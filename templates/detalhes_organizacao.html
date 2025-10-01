@@ -1,16 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}Detalhes de {{ cliente.nome }} - DataCheckAI{% endblock %}
+{% block title %}Detalhes de {{ organizacao.nome }} - DataCheckAI{% endblock %}
 
 {% block content %}
-<div class="cliente-header">
-    <h2>Migração de Dados - {{ cliente.nome }}</h2>
-    <p>CNPJ: {{ cliente.cnpj or 'Não informado' }} | Código: {{ cliente.codigo }}</p>
+<div class="organizacao-header">
+    <h2>Migração de Dados - {{ organizacao.nome }}</h2>
+    <div class="info-organizacao">
+        <p><strong>Código:</strong> {{ organizacao.codigo }}</p>
+        <div class="cnpjs-list">
+            <strong>CNPJs:</strong>
+            <ul>
+                {% for cnpj in organizacao.cnpjs|sort(attribute='is_matriz', reverse=True) %}
+                    <li>{{ cnpj.numero }} {% if cnpj.is_matriz %}(Matriz){% else %}(Filial){% endif %}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
 </div>
 
 <div class="upload-section">
     <h3>Iniciar Nova Migração</h3>
-    <form action="{{ url_for('processar_arquivo', cliente_id=cliente.id) }}" method="POST" enctype="multipart/form-data" id="upload-form">
+    <form action="{{ url_for('processar_arquivo', organizacao_id=organizacao.id) }}" method="POST" enctype="multipart/form-data" id="upload-form">
         <div class="form-group">
             <label for="modulo">Selecione o Módulo (Layout):</label>
             <select name="modulo" id="modulo" required>
@@ -63,7 +73,7 @@
         </tbody>
     </table>
     {% else %}
-    <p>Nenhum arquivo foi processado para este cliente ainda.</p>
+    <p>Nenhum arquivo foi processado para esta organização ainda.</p>
     {% endif %}
 </div>
 {% endblock %}

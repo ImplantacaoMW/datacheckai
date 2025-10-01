@@ -200,7 +200,7 @@ class MercadoriasProcessor:
                 valid_samples.add(str(val))
         return list(valid_samples)
 
-    def exportar_txt(self, df_original, mapeamento, cliente_id):
+    def exportar_txt(self, df_original, mapeamento, organizacao_codigo, cnpj_matriz):
         """
         Gera o arquivo TXT formatado para o layout de mercadorias, garantindo
         a ordem correta das colunas.
@@ -222,7 +222,8 @@ class MercadoriasProcessor:
         # Instancia o exportador com o DataFrame formatado
         exporter = export_service.LayoutExporter(
             modulo='mercadorias',
-            cliente_id=cliente_id,
+            organizacao_codigo=organizacao_codigo,
+            cnpj_matriz=cnpj_matriz,
             dados_validados=df_export
         )
 

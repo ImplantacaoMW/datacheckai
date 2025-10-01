@@ -1,13 +1,12 @@
 import os
 import secrets
 
-# Configuração do Banco de Dados
-DB_HOST = os.environ.get('DB_HOST', 'localhost')
-DB_NAME = os.environ.get('DB_NAME', 'datacheck')
-DB_USER = os.environ.get('DB_USER', 'postgres')
-DB_PASS = os.environ.get('DB_PASS', 'xbala')
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}"
-
+# Configuração do Banco de Dados - Usando SQLite para verificação
+DB_HOST = 'localhost'
+DB_NAME = 'datacheck_test.db'
+DB_USER = 'postgres'
+DB_PASS = 'xbala'
+DATABASE_URL = f"sqlite:///{DB_NAME}" # Usando SQLite em arquivo para a verificação
 
 # Configuração do Flask
 SECRET_KEY = secrets.token_hex(16)

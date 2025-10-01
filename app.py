@@ -18,7 +18,7 @@ import glob
 from werkzeug.utils import secure_filename
 from decimal import Decimal
 
-from models.database import db, init_db as init_database, Cliente, SessaoMigracao, ProgressoMigracao
+from models.database import db, init_db as init_database, Organizacao, CNPJ, SessaoMigracao, ProgressoMigracao
 from services import file_processor, mapping_service, validation_service
 from modules.mercadorias import MercadoriasProcessor
 from modules.pessoas import PessoasProcessor
@@ -332,7 +332,7 @@ with app.app_context():
 # I will just copy the rest of the original file content here
 
 
-# ------------ NEW DASHBOARD & CLIENT ROUTES ------------ #
+# ------------ NEW DASHBOARD & ORGANIZATION ROUTES ------------ #
 
 @app.route('/')
 def index():
@@ -341,65 +341,82 @@ def index():
 
 @app.route('/dashboard')
 def dashboard():
-    """Displays the main dashboard with all clients and their progress."""
-    clientes = Cliente.query.options(db.joinedload(Cliente.progressos)).order_by(Cliente.nome).all()
-    return render_template('dashboard.html', clientes=clientes)
+    """Displays the main dashboard with all organizations and their progress."""
+    organizacoes = Organizacao.query.options(db.joinedload(Organizacao.progressos)).order_by(Organizacao.nome).all()
+    return render_template('dashboard.html', organizacoes=organizacoes)
 
-@app.route('/cliente/adicionar', methods=['GET', 'POST'])
-def adicionar_cliente():
-    """Handles the creation of a new client."""
+@app.route('/organizacao/adicionar', methods=['GET', 'POST'])
+def adicionar_organizacao():
+    """Handles the creation of a new organization with its matrix and branch CNPJs."""
     if request.method == 'POST':
         nome = request.form.get('nome')
         codigo = request.form.get('codigo')
-        cnpj = request.form.get('cnpj')
+        cnpj_matriz = request.form.get('cnpj_matriz')
+        cnpjs_filiais = request.form.getlist('cnpjs_filiais[]')
 
-        if not nome or not codigo:
-            flash('Nome e Código são campos obrigatórios.', 'danger')
-            return redirect(url_for('adicionar_cliente'))
+        if not nome or not codigo or not cnpj_matriz:
+            flash('Nome, Código e CNPJ da Matriz são campos obrigatórios.', 'danger')
+            return redirect(url_for('adicionar_organizacao'))
 
-        if Cliente.query.filter_by(codigo=codigo).first():
+        if Organizacao.query.filter_by(codigo=codigo).first():
             flash(f'O código "{codigo}" já está em uso.', 'danger')
-            return redirect(url_for('adicionar_cliente'))
+            return redirect(url_for('adicionar_organizacao'))
 
-        novo_cliente = Cliente(nome=nome, codigo=codigo, cnpj=cnpj)
-        db.session.add(novo_cliente)
-        db.session.commit() # Commit to get the ID
+        # Check for duplicate CNPJs
+        todos_cnpjs = [cnpj_matriz] + [cnpj for cnpj in cnpjs_filiais if cnpj]
+        if CNPJ.query.filter(CNPJ.numero.in_(todos_cnpjs)).first():
+            flash('Um ou mais CNPJs informados já estão cadastrados no sistema.', 'danger')
+            return redirect(url_for('adicionar_organizacao'))
 
-        # Create initial progress entries for the new client
+        # Create Organization and CNPJs
+        nova_organizacao = Organizacao(nome=nome, codigo=codigo)
+        db.session.add(nova_organizacao)
+
+        matriz = CNPJ(numero=cnpj_matriz, is_matriz=True, organizacao=nova_organizacao)
+        db.session.add(matriz)
+
+        for cnpj_filial in cnpjs_filiais:
+            if cnpj_filial: # Ensure it's not an empty string
+                filial = CNPJ(numero=cnpj_filial, is_matriz=False, organizacao=nova_organizacao)
+                db.session.add(filial)
+
+        db.session.flush() # Flush to assign nova_organizacao.id
+
+        # Create initial progress entries
         for modulo_key in LAYOUTS.keys():
-            progresso = ProgressoMigracao(cliente_id=novo_cliente.id, modulo=modulo_key)
+            progresso = ProgressoMigracao(organizacao_id=nova_organizacao.id, modulo=modulo_key)
             db.session.add(progresso)
+
         db.session.commit()
 
-        flash(f'Cliente "{nome}" adicionado com sucesso!', 'success')
+        flash(f'Organização "{nome}" adicionada com sucesso!', 'success')
         return redirect(url_for('dashboard'))
 
-    return render_template('adicionar_cliente.html')
+    return render_template('adicionar_organizacao.html')
 
-@app.route('/cliente/<int:cliente_id>')
-def detalhes_cliente(cliente_id):
-    """Displays the details page for a specific client, including their migration history."""
-    cliente = Cliente.query.get_or_404(cliente_id)
-    sessoes = SessaoMigracao.query.filter_by(cliente_id=cliente_id).order_by(SessaoMigracao.data_processamento.desc()).all()
-    return render_template('detalhes_cliente.html', cliente=cliente, sessoes=sessoes, layouts=LAYOUTS)
+@app.route('/organizacao/<int:organizacao_id>')
+def detalhes_organizacao(organizacao_id):
+    """Displays the details page for a specific organization, including their migration history."""
+    organizacao = Organizacao.query.get_or_404(organizacao_id)
+    sessoes = SessaoMigracao.query.filter_by(organizacao_id=organizacao_id).order_by(SessaoMigracao.data_processamento.desc()).all()
+    return render_template('detalhes_organizacao.html', organizacao=organizacao, sessoes=sessoes, layouts=LAYOUTS)
 
-@app.route('/processar_arquivo/<int:cliente_id>', methods=['POST'])
-def processar_arquivo(cliente_id):
+@app.route('/processar_arquivo/<int:organizacao_id>', methods=['POST'])
+def processar_arquivo(organizacao_id):
     """
-    Handles the file upload for a specific client and module.
-    This replaces the old `/validador/<tipo>/upload` route.
+    Handles the file upload for a specific organization and module.
     """
-    cliente = Cliente.query.get_or_404(cliente_id)
+    organizacao = Organizacao.query.get_or_404(organizacao_id)
     tipo_layout = request.form.get('modulo')
     file = request.files.get('arquivo')
 
     if not tipo_layout or not file or not file.filename:
         flash('Módulo e arquivo são obrigatórios.', 'danger')
-        return redirect(url_for('detalhes_cliente', cliente_id=cliente_id))
+        return redirect(url_for('detalhes_organizacao', organizacao_id=organizacao_id))
 
     if tipo_layout not in LAYOUTS or tipo_layout not in PROCESSORS:
         flash('Layout ou processador inválido.', 'danger')
-        return redirect(url_for('detalhes_cliente', cliente_id=cliente_id))
+        return redirect(url_for('detalhes_organizacao', organizacao_id=organizacao_id))
 
     processor = PROCESSORS[tipo_layout](LAYOUTS[tipo_layout])
 
@@ -507,6 +524,7 @@ def validador_mapear(tipo):
         flash("Sessão de migração inválida.", 'danger')
         return redirect(url_for('dashboard'))
 
+    organizacao = sessao_migracao.organizacao
     processor = PROCESSORS[tipo](LAYOUTS[tipo])
     mapear_info = session.get('mapear', [])
     dataframes = session.get('dataframes', {})
@@ -537,10 +555,11 @@ def validador_mapear(tipo):
     sessao_migracao.registros_validos = total_validos
 
     if total_invalidos == 0:
-        caminho_arquivo_gerado = processor.exportar_txt(df, mapeamento_usuario, sessao_migracao.cliente.codigo)
+        cnpj_matriz = organizacao.get_cnpj_matriz()
+        caminho_arquivo_gerado = processor.exportar_txt(df, mapeamento_usuario, organizacao.codigo, cnpj_matriz)
         sessao_migracao.arquivo_gerado = caminho_arquivo_gerado
 
-    progresso = ProgressoMigracao.query.filter_by(cliente_id=sessao_migracao.cliente_id, modulo=tipo).first()
+    progresso = ProgressoMigracao.query.filter_by(organizacao_id=sessao_migracao.organizacao_id, modulo=tipo).first()
     if progresso:
         percentual = int((total_validos / total_linhas) * 100) if total_linhas > 0 else 0
         progresso.percentual_completo = percentual

@@ -192,7 +192,7 @@ class PessoasProcessor:
                 valid_samples.add(str(val))
         return list(valid_samples)
 
-    def exportar_txt(self, df_original, mapeamento, cliente_id):
+    def exportar_txt(self, df_original, mapeamento, organizacao_codigo, cnpj_matriz):
         """
         Normaliza, formata e gera o arquivo TXT para o layout de pessoas,
         garantindo a ordem correta das colunas.
@@ -214,7 +214,8 @@ class PessoasProcessor:
         # 3. Instancia o exportador com o DataFrame final
         exporter = export_service.LayoutExporter(
             modulo='pessoas',
-            cliente_id=cliente_id,
+            organizacao_codigo=organizacao_codigo,
+            cnpj_matriz=cnpj_matriz,
             dados_validados=df_export
         )
         return exporter.export()

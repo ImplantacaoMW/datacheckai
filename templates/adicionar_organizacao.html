@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Adicionar Nova Organização - DataCheckAI{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Cadastrar Nova Organização</h2>
+    <form method="POST" action="{{ url_for('adicionar_organizacao') }}" id="form-organizacao">
+        <div class="form-group">
+            <label for="nome">Nome da Organização *</label>
+            <input type="text" id="nome" name="nome" required>
+        </div>
+        <div class="form-group">
+            <label for="codigo">Código Único *</label>
+            <input type="text" id="codigo" name="codigo" required>
+        </div>
+        <hr>
+        <h4>CNPJs</h4>
+        <div class="form-group">
+            <label for="cnpj_matriz">CNPJ da Matriz *</label>
+            <input type="text" id="cnpj_matriz" name="cnpj_matriz" required pattern="\d{14}" title="Digite um CNPJ com 14 dígitos">
+        </div>
+        <div id="filiais-container">
+            <label>CNPJs das Filiais</label>
+            <!-- Campos de filial serão adicionados aqui -->
+        </div>
+        <button type="button" id="add-filial" class="btn btn-sm">Adicionar Filial</button>
+
+        <div class="form-actions">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Salvar Organização</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addFilialBtn = document.getElementById('add-filial');
+    const filiaisContainer = document.getElementById('filiais-container');
+
+    addFilialBtn.addEventListener('click', function() {
+        const filialGroup = document.createElement('div');
+        filialGroup.className = 'form-group filial-group';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = 'cnpjs_filiais[]';
+        input.pattern = '\\d{14}';
+        input.title = 'Digite um CNPJ com 14 dígitos';
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn btn-danger btn-sm';
+        removeBtn.textContent = 'Remover';
+        removeBtn.onclick = function() {
+            filiaisContainer.removeChild(filialGroup);
+        };
+
+        filialGroup.appendChild(input);
+        filialGroup.appendChild(removeBtn);
+        filiaisContainer.appendChild(filialGroup);
+    });
+});
+</script>
+{% endblock %}
