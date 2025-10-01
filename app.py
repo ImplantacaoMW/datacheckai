@@ -17,6 +17,7 @@ import unicodedata
 import glob
 from werkzeug.utils import secure_filename
 from decimal import Decimal
+from sqlalchemy.orm import joinedload
 
 from models.database import db, init_db as init_database, Organizacao, CNPJ, SessaoMigracao, ProgressoMigracao
 from services import file_processor, mapping_service, validation_service
@@ -336,9 +337,16 @@ with app.app_context():
 
 @app.route('/')
 def index():
-    """Displays the organization selection screen."""
-    organizacoes = Organizacao.query.order_by(Organizacao.nome).all()
-    return render_template('selecionar_organizacao.html', organizacoes=organizacoes)
+    """Displays the main dashboard with all organizations and their progress."""
+    organizacoes = Organizacao.query.options(
+        joinedload(Organizacao.progressos)
+    ).order_by(Organizacao.nome).all()
+
+    # Make layout data available for the template
+    for org in organizacoes:
+        org.progressos_por_modulo = {p.modulo: p for p in org.progressos}
+
+    return render_template('selecionar_organizacao.html', organizacoes=organizacoes, layouts=LAYOUTS)
 
 @app.route('/dashboard')
 def dashboard():

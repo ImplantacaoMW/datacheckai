@@ -1,32 +1,149 @@
 {% extends "base.html" %}
 
-{% block title %}Selecionar Organização - DataCheckAI{% endblock %}
+{% block title %}Dashboard de Organizações - DataCheckAI{% endblock %}
+
+{% block head_styles %}
+<style>
+    .dashboard-container {
+        padding: 2rem;
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .org-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .org-card {
+        background-color: var(--card-bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .org-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .org-card-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .org-card-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: var(--text-color);
+    }
+
+    .org-card-header .org-code {
+        font-size: 0.85rem;
+        color: var(--text-muted-color);
+        margin-top: 0.25rem;
+    }
+
+    .org-card-body h4 {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        color: var(--text-color);
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.5rem;
+    }
+
+    .progress-item {
+        margin-bottom: 1rem;
+    }
+
+    .progress-item .progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-muted-color);
+    }
+
+    .progress-bar-container {
+        width: 100%;
+        background-color: var(--border-color);
+        border-radius: 4px;
+        height: 12px;
+    }
+
+    .progress-bar {
+        background-color: var(--primary-color);
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.5s ease-in-out;
+    }
+
+    .no-orgs {
+        text-align: center;
+        padding: 3rem;
+        background-color: var(--card-bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="selection-container">
-    <h2>Selecione uma Organização</h2>
-    <p>Escolha uma organização existente para continuar ou cadastre uma nova.</p>
-
-    <div class="organizacoes-list">
-        {% if organizacoes %}
-            <ul>
-                {% for org in organizacoes %}
-                    <li>
-                        <a href="{{ url_for('selecionar_layout', organizacao_id=org.id) }}">
-                            <strong>{{ org.nome }}</strong> (Código: {{ org.codigo }})
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>Nenhuma organização cadastrada.</p>
-        {% endif %}
-    </div>
-
-    <div class="actions">
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <div>
+            <h2>Dashboard de Organizações</h2>
+            <p>Visão geral do progresso de migração de cada organização.</p>
+        </div>
         <a href="{{ url_for('adicionar_organizacao') }}" class="btn btn-primary">
-            + Cadastrar Nova Organização
+            <i class="fas fa-plus"></i> Cadastrar Nova Organização
         </a>
     </div>
+
+    {% if organizacoes %}
+        <div class="org-grid">
+            {% for org in organizacoes %}
+                <a href="{{ url_for('detalhes_organizacao', organizacao_id=org.id) }}" class="org-card">
+                    <div class="org-card-header">
+                        <h3>{{ org.nome }}</h3>
+                        <p class="org-code">Código: {{ org.codigo }}</p>
+                    </div>
+                    <div class="org-card-body">
+                        <h4>Progresso da Migração</h4>
+                        {% for key, layout_info in layouts.items() %}
+                            {% set progresso = org.progressos_por_modulo.get(key) %}
+                            {% set percentual = progresso.percentual_completo if progresso else 0 %}
+                            <div class="progress-item">
+                                <div class="progress-label">
+                                    <span>{{ layout_info.nome }}</span>
+                                    <span>{{ percentual }}%</span>
+                                </div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar" style="width: {{ percentual }}%;"></div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-orgs">
+            <h3>Nenhuma organização cadastrada.</h3>
+            <p>Comece cadastrando uma nova organização para iniciar o processo de migração de dados.</p>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

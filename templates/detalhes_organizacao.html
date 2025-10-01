@@ -20,21 +20,10 @@
 
 <div class="upload-section">
     <h3>Iniciar Nova Migração</h3>
-    <form action="{{ url_for('processar_arquivo', organizacao_id=organizacao.id) }}" method="POST" enctype="multipart/form-data" id="upload-form">
-        <div class="form-group">
-            <label for="modulo">Selecione o Módulo (Layout):</label>
-            <select name="modulo" id="modulo" required>
-                {% for key, value in layouts.items() %}
-                    <option value="{{ key }}">{{ value.nome }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="arquivo">Selecione o Arquivo:</label>
-            <input type="file" name="arquivo" id="arquivo" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Processar Arquivo</button>
-    </form>
+    <p>Para iniciar uma nova migração de dados, selecione um dos layouts de importação.</p>
+    <a href="{{ url_for('selecionar_layout', organizacao_id=organizacao.id) }}" class="btn btn-primary">
+        <i class="fas fa-file-upload"></i> Iniciar Nova Migração
+    </a>
 </div>
 
 <div class="sessoes-historico">
