@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes de {{ cliente.nome }} - DataCheckAI{% endblock %}
+
+{% block content %}
+<div class="cliente-header">
+    <h2>Migração de Dados - {{ cliente.nome }}</h2>
+    <p>CNPJ: {{ cliente.cnpj or 'Não informado' }} | Código: {{ cliente.codigo }}</p>
+</div>
+
+<div class="upload-section">
+    <h3>Iniciar Nova Migração</h3>
+    <form action="{{ url_for('processar_arquivo', cliente_id=cliente.id) }}" method="POST" enctype="multipart/form-data" id="upload-form">
+        <div class="form-group">
+            <label for="modulo">Selecione o Módulo (Layout):</label>
+            <select name="modulo" id="modulo" required>
+                {% for key, value in layouts.items() %}
+                    <option value="{{ key }}">{{ value.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="arquivo">Selecione o Arquivo:</label>
+            <input type="file" name="arquivo" id="arquivo" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Processar Arquivo</button>
+    </form>
+</div>
+
+<div class="sessoes-historico">
+    <h3>Histórico de Processamento</h3>
+    {% if sessoes %}
+    <table class="historico-table">
+        <thead>
+            <tr>
+                <th>Módulo</th>
+                <th>Arquivo Original</th>
+                <th>Data</th>
+                <th>Total de Registros</th>
+                <th>Registros Válidos</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sessao in sessoes %}
+            <tr>
+                <td>{{ sessao.modulo|capitalize }}</td>
+                <td>{{ sessao.arquivo_original }}</td>
+                <td>{{ sessao.data_processamento.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td>{{ sessao.total_registros }}</td>
+                <td>{{ sessao.registros_validos }}</td>
+                <td><span class="status status-{{ sessao.status }}">{{ sessao.status }}</span></td>
+                <td>
+                    {% if sessao.arquivo_gerado %}
+                    <a href="{{ url_for('download_arquivo', sessao_id=sessao.id) }}" class="btn btn-sm">Download TXT</a>
+                    {% else %}
+                    <span>-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Nenhum arquivo foi processado para este cliente ainda.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard de Clientes - DataCheckAI{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h2>Dashboard de Migração de Clientes</h2>
+    <a href="{{ url_for('adicionar_cliente') }}" class="btn btn-primary">Adicionar Novo Cliente</a>
+</div>
+
+<div class="clientes-grid">
+    {% for cliente in clientes %}
+    <div class="cliente-card">
+        <h3>{{ cliente.nome }} ({{ cliente.codigo }})</h3>
+        <div class="progresso-modulos">
+            {% for modulo in cliente.progressos %}
+            <div class="modulo-progresso">
+                <span class="modulo-nome">{{ modulo.modulo|capitalize }}</span>
+                <div class="progress-bar">
+                    <div class="progress" style="width: {{ modulo.percentual_completo }}%"></div>
+                </div>
+                <span class="modulo-percentual">{{ modulo.percentual_completo }}%</span>
+            </div>
+            {% else %}
+            <p>Nenhum progresso de migração registrado.</p>
+            {% endfor %}
+        </div>
+        <a href="{{ url_for('detalhes_cliente', cliente_id=cliente.id) }}" class="btn">
+            Gerenciar Migração
+        </a>
+    </div>
+    {% else %}
+    <div class.info-box>
+        <p>Nenhum cliente cadastrado. <a href="{{ url_for('adicionar_cliente') }}">Adicione o primeiro cliente</a> para começar.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Adicionar Novo Cliente - DataCheckAI{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Cadastrar Novo Cliente</h2>
+    <form method="POST" action="{{ url_for('adicionar_cliente') }}">
+        <div class="form-group">
+            <label for="nome">Nome do Cliente *</label>
+            <input type="text" id="nome" name="nome" required>
+        </div>
+        <div class="form-group">
+            <label for="codigo">Código Único *</label>
+            <input type="text" id="codigo" name="codigo" required>
+        </div>
+        <div class="form-group">
+            <label for="cnpj">CNPJ</label>
+            <input type="text" id="cnpj" name="cnpj">
+        </div>
+        <div class="form-actions">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Salvar Cliente</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
